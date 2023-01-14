@@ -10,7 +10,10 @@ import { signOut } from "firebase/auth"
 import { useAuthState } from "react-firebase-hooks/auth"
 import { useState } from "react"
 import * as EmailValidator from 'email-validator'
-import { addDoc, collection } from "firebase/firestore"
+import { addDoc, collection, query, where } from "firebase/firestore"
+import { useCollection } from 'react-firebase-hooks/firestore'
+import { Conversation } from '../types'
+import ConversationSelect from "./ConversationSelect"
 
 const StyledContainer = styled.div`
     height: 100vh;
@@ -90,18 +93,37 @@ const Silebar = () => {
 
     const isInvitingSelf = recipientEmail === loggedInUser?.email;
 
+    // check if conversation already exists between the current logged in user and recipient
+	const queryGetConversationsForCurrentUser = query(
+		collection(db, 'conversations'),
+		where('users', 'array-contains', loggedInUser?.email)
+	)
+	const [conversationsSnapshot, __loading, __error] = useCollection(
+		queryGetConversationsForCurrentUser
+	)
+
+	const isConversationAlreadyExists = (recipientEmail: string) =>
+		conversationsSnapshot?.docs.find(conversation =>
+			(conversation.data() as Conversation).users.includes(recipientEmail)
+		)
+
     const createConversationDialog = async () => {
-        if(!recipientEmail) return
+		if (!recipientEmail) return
 
-        if(!EmailValidator.validate(recipientEmail) && !isInvitingSelf) {
-            await addDoc(collection(db, 'conversations'), {
-                users: [loggedInUser?.email, recipientEmail]
-            })
-        }
+		if (
+			EmailValidator.validate(recipientEmail) &&
+			!isInvitingSelf && !isConversationAlreadyExists(recipientEmail)
+		) {
+			// Add conversation user to db "conversations" collection
+			// A conversation is between the currently logged in user and the user invited.
 
+			await addDoc(collection(db, 'conversations'), {
+				users: [loggedInUser?.email, recipientEmail]
+			})
+		}
 
-        closeNewConversationDialog()
-    }
+		closeNewConversationDialog()
+	}
 
 
     const logout = async () => {
@@ -111,6 +133,7 @@ const Silebar = () => {
             console.log("ERR: ", error)
         }
     }
+    console.log(loggedInUser?.photoURL)
 
   return (
     <StyledContainer>
@@ -137,6 +160,13 @@ const Silebar = () => {
         <StyledSilebarButton onClick={()=> toggleNewConversationDialog(true)} >
             START A NEW CONVERSATION
         </StyledSilebarButton>
+        {conversationsSnapshot?.docs.map(conversation => (
+				<ConversationSelect
+					key={conversation.id}
+					id={conversation.id}
+					conversationUsers={(conversation.data() as Conversation).users}
+				/>
+			))}
         <Dialog open={isOpenNewConversationDialog} onClose={closeNewConversationDialog}>
         <DialogTitle>New Conversation</DialogTitle>
         <DialogContent>
