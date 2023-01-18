@@ -22,6 +22,11 @@ const StyledContainer = styled.div`
     overflow-y: scroll;
     border-right: 1px solid whitesmoke;
     background-color: #fff;
+    ::-webkit-scrollbar {
+    display: none;
+    }
+    -ms-overflow-style: none;  
+    scrollbar-width: none;  
 `
 
 const StyledHeader =  styled.div`
