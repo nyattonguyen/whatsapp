@@ -107,7 +107,7 @@ const ConversationScreen = ({
 
   const router = useRouter();
 
-  const conversationId = router.query.id; // localhost:300/conversations/:id
+  const conversationId = router.query.id; // localhost:3000/conversations/:id
 
   const queryGetMessages = generateQueryMessages(conversationId as string);
 
